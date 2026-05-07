@@ -9,6 +9,7 @@ from typing import Any
 
 from .advance_wave import incomplete_started_wave
 from .state import StateStore
+from .worker_runtime import worker_summary
 
 DOCTOR_SCHEMA_VERSION = 2
 
@@ -64,6 +65,13 @@ REMEDIATION_DEFINITIONS: dict[str, dict[str, Any]] = {
         "safe": False,
         "category": "workflow",
         "description": "Operator must finish, block, or explicitly override the incomplete started wave.",
+    },
+    "resolve_stale_worker": {
+        "id": "resolve_stale_worker",
+        "action": "operator_action",
+        "safe": False,
+        "category": "worker",
+        "description": "Operator must heartbeat, stop, fail, or complete stale no-op workers.",
     },
 }
 
@@ -148,6 +156,35 @@ def run_doctor(cwd: str | Path | None = None) -> dict[str, Any]:
             )
         else:
             _check(checks, "active_wave_complete", True, "no incomplete started wave", category="workflow")
+
+        workers = state.get("workers", [])
+        worker_events = state.get("worker_events", [])
+        worker_shape_ok = isinstance(workers, list) and isinstance(worker_events, list)
+        _check(
+            checks,
+            "worker_state_shape",
+            worker_shape_ok,
+            "workers and worker_events are lists" if worker_shape_ok else "workers and worker_events must be lists",
+            severity="error",
+            category="worker",
+        )
+        if worker_shape_ok:
+            summary = worker_summary(state)
+            stale = summary.get("stale", [])
+            if stale:
+                _add_remediation(remediations, "resolve_stale_worker", data={"worker_ids": stale})
+                _check(
+                    checks,
+                    "active_workers",
+                    False,
+                    f"stale workers: {', '.join(stale)}",
+                    severity="warning",
+                    category="worker",
+                    data=summary,
+                    remediations=["resolve_stale_worker"],
+                )
+            else:
+                _check(checks, "active_workers", True, f"active={len(summary.get('active', []))}", category="worker", data=summary)
     except Exception as exc:  # noqa: BLE001 - doctor should report failures as data
         _check(checks, "state_load", False, str(exc), severity="error", category="state")
 

@@ -1,5 +1,5 @@
 name: hermes-flywheel
-version: 0.4.0
+version: 0.5.0
 description: Local-first Hermes flywheel orchestration plugin with integrity checkpoints, evidence-gated waves, and safe remediation
 entrypoint: hermes_flywheel_plugin:register
 tools:
@@ -8,6 +8,9 @@ tools:
   - hermes_flywheel_plan
   - hermes_flywheel_create_tasks
   - hermes_flywheel_update_task
+  - hermes_flywheel_create_worker
+  - hermes_flywheel_update_worker
+  - hermes_flywheel_list_workers
   - hermes_flywheel_advance_wave
   - hermes_flywheel_review
   - hermes_flywheel_doctor

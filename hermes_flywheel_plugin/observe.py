@@ -8,6 +8,7 @@ from typing import Any
 from .advance_wave import incomplete_started_wave
 from .profile import build_repo_profile
 from .state import StateStore, utc_now
+from .worker_runtime import worker_summary
 
 
 def observe(cwd: str | Path | None = None, note: str = "") -> dict[str, Any]:
@@ -23,6 +24,7 @@ def observe(cwd: str | Path | None = None, note: str = "") -> dict[str, Any]:
         "profile": profile,
         "state_exists": (root / ".hermes-flywheel" / "state.json").exists(),
         "blocked_wave": blocker,
+        "workers": worker_summary(state),
     }
     state.setdefault("observations", []).append(observation)
     store.save(state)

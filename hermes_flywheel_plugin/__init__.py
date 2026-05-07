@@ -16,20 +16,24 @@ from .schemas import (
     ADVANCE_WAVE_SCHEMA,
     CHECKPOINT_SCHEMA,
     CREATE_TASKS_SCHEMA,
+    CREATE_WORKER_SCHEMA,
     DOCTOR_SCHEMA,
     GET_SKILL_SCHEMA,
+    LIST_WORKERS_SCHEMA,
     OBSERVE_SCHEMA,
     PLAN_SCHEMA,
     PROFILE_SCHEMA,
     REMEDIATE_SCHEMA,
     REVIEW_SCHEMA,
     UPDATE_TASK_SCHEMA,
+    UPDATE_WORKER_SCHEMA,
     VERIFY_TASKS_SCHEMA,
 )
 from .skills_bundle import get_skill
 from .state import StateStore
 from .task_lifecycle import update_task
 from .verification import verify_tasks
+from .worker_runtime import create_worker, list_workers, update_worker
 
 TOOLSET = "hermes_flywheel"
 
@@ -75,6 +79,18 @@ def _advance_wave(args: dict[str, Any]) -> dict[str, Any]:
 
 def _update_task(args: dict[str, Any]) -> dict[str, Any]:
     return update_task(args.get("cwd"), args.get("task_id", ""), args.get("status"), args.get("notes"), args.get("blocker"))
+
+
+def _create_worker(args: dict[str, Any]) -> dict[str, Any]:
+    return create_worker(args.get("cwd"), args.get("task_id"), args.get("wave_id"), args.get("name", ""), args.get("runtime", "noop"), args.get("metadata"))
+
+
+def _update_worker(args: dict[str, Any]) -> dict[str, Any]:
+    return update_worker(args.get("cwd"), args.get("worker_id", ""), args.get("action", ""), args.get("message"), args.get("data"))
+
+
+def _list_workers(args: dict[str, Any]) -> dict[str, Any]:
+    return list_workers(args.get("cwd"), args.get("status"), args.get("task_id"), args.get("wave_id"))
 
 
 def _review(args: dict[str, Any]) -> dict[str, Any]:
@@ -127,6 +143,9 @@ def register(ctx: Any) -> None:
     ctx.register_tool("hermes_flywheel_create_tasks", TOOLSET, CREATE_TASKS_SCHEMA, _handler(_create_tasks), "Create or replace the local flywheel task graph.")
     ctx.register_tool("hermes_flywheel_advance_wave", TOOLSET, ADVANCE_WAVE_SCHEMA, _handler(_advance_wave), "Select the next ready task wave; blocks on incomplete prior waves unless forced.")
     ctx.register_tool("hermes_flywheel_update_task", TOOLSET, UPDATE_TASK_SCHEMA, _handler(_update_task), "Update a task status plus optional lifecycle notes and blocker fields.")
+    ctx.register_tool("hermes_flywheel_create_worker", TOOLSET, CREATE_WORKER_SCHEMA, _handler(_create_worker), "Create a state-backed no-op worker record without spawning processes.")
+    ctx.register_tool("hermes_flywheel_update_worker", TOOLSET, UPDATE_WORKER_SCHEMA, _handler(_update_worker), "Advance a no-op worker lifecycle and append a worker event.")
+    ctx.register_tool("hermes_flywheel_list_workers", TOOLSET, LIST_WORKERS_SCHEMA, _handler(_list_workers), "List state-backed no-op workers and recent events.")
     ctx.register_tool("hermes_flywheel_review", TOOLSET, REVIEW_SCHEMA, _handler(_review), "Validate and record a completion report.")
     ctx.register_tool("hermes_flywheel_doctor", TOOLSET, DOCTOR_SCHEMA, _handler(_doctor), "Run local health checks for the flywheel plugin state.")
     ctx.register_tool("hermes_flywheel_remediate", TOOLSET, REMEDIATE_SCHEMA, _handler(_remediate), "Dry-run or apply safe local doctor remediations.")

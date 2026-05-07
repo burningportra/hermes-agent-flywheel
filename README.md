@@ -2,16 +2,22 @@
 
 Hermes Agent Flywheel is a local-first Hermes plugin for an agent-flywheel/pi-orchestrator style workflow loop.
 
-v0.4 keeps the runtime stdlib-only and splits diagnosis from remediation: doctor is read-oriented and reports stable remediation ids, while remediate dry-runs by default and only applies safe local filesystem/checkpoint repairs when explicitly requested.
+v0.5 keeps the runtime stdlib-only and adds a state-backed no-op worker substrate: Hermes can now model worker lifecycle records and events without spawning agents, processes, tmux panes, NTM sessions, or network services.
 
 Product truth for this scaffold:
 
 - Local-first and safe by default.
 - Python stdlib only at runtime.
 - Stores state as JSON under `.hermes-flywheel/` in the current working directory.
-- Provides observation, repo profiling, planning/task graph creation, task lifecycle updates, evidence-gated wave advancement, standalone task verification, integrity checkpoints, review/completion reporting, doctor checks, safe remediation, and packaged skill text loading.
+- Provides observation, repo profiling, planning/task graph creation, task lifecycle updates, no-op worker lifecycle records, evidence-gated wave advancement, standalone task verification, integrity checkpoints, review/completion reporting, doctor checks, safe remediation, and packaged skill text loading.
 - Does not spawn agents or call external services during normal tool handling; repository hosting/remotes are managed outside the plugin.
 - Intended to be commit-worthy scaffolding, not a complete production orchestrator.
+
+## v0.5 capabilities
+
+- No-op worker runtime substrate: `hermes_flywheel_create_worker`, `hermes_flywheel_update_worker`, and `hermes_flywheel_list_workers` create state-backed worker records and append-only worker events without spawning processes or agents.
+- Worker lifecycle contract: workers can move through `created`, `running`, `idle`, `completed`, `failed`, and `stopped`; terminal workers reject further mutation.
+- Observation/doctor awareness: observation includes worker summary and recent events; doctor reports worker state shape plus stale active workers as `resolve_stale_worker` operator actions.
 
 ## v0.4 capabilities
 
@@ -42,6 +48,7 @@ Product truth for this scaffold:
 - `hermes_flywheel_plugin/profile.py` - local repository profile builder.
 - `hermes_flywheel_plugin/task_graph.py` - task graph model and transitions.
 - `hermes_flywheel_plugin/task_lifecycle.py` - task status/notes/blocker updates.
+- `hermes_flywheel_plugin/worker_runtime.py` - state-backed no-op worker records and append-only events.
 - `hermes_flywheel_plugin/completion_report.py` - completion report validation and atomic success report files.
 - `hermes_flywheel_plugin/observe.py` - local repo observation.
 - `hermes_flywheel_plugin/doctor.py` - environment and state checks plus stable remediation recommendations.
@@ -77,13 +84,16 @@ pip install -e '.[dev]'
 pytest
 ```
 
-## Tool names registered in v0.4
+## Tool names registered in v0.5
 
 - `hermes_flywheel_observe`
 - `hermes_flywheel_profile`
 - `hermes_flywheel_plan`
 - `hermes_flywheel_create_tasks`
 - `hermes_flywheel_update_task`
+- `hermes_flywheel_create_worker`
+- `hermes_flywheel_update_worker`
+- `hermes_flywheel_list_workers`
 - `hermes_flywheel_advance_wave`
 - `hermes_flywheel_review`
 - `hermes_flywheel_doctor`
@@ -106,6 +116,7 @@ Checkpoint contract:
 - Checkpoints include an integrity envelope whose `stateHash` is the SHA-256 of canonical JSON state; validation detects missing, invalid JSON, and hash-mismatched checkpoints.
 - A wave is considered complete only when each wave task has status `done` and its latest completion report has outcome `success`.
 - Tool handlers return structured JSON strings so Hermes can surface either `ok` results or normalized errors.
+- Worker records and worker events are state-backed no-op lifecycle facts only; v0.5 never spawns processes, agents, panes, or network services.
 
 Remediation contract:
 
