@@ -99,6 +99,17 @@ VERIFY_TASKS_SCHEMA = {
     },
 }
 
+EXPORT_WAVE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "cwd": {"type": "string"},
+        "wave_id": {"type": "string"},
+        "format": {"type": "string", "enum": ["json", "markdown"]},
+        "output_path": {"type": "string"},
+        "include_evidence_contract": {"type": "boolean"},
+    },
+}
+
 GET_SKILL_SCHEMA = {
     "type": "object",
     "properties": {"name": {"type": "string", "enum": ["start", "planning", "review"]}},

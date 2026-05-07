@@ -18,7 +18,7 @@ STATE_DIR = ".hermes-flywheel"
 STATE_FILE = "state.json"
 CHECKPOINT_FILE = "checkpoint.json"
 CHECKPOINT_SCHEMA_VERSION = 1
-FLYWHEEL_VERSION = "0.8.0"
+FLYWHEEL_VERSION = "0.9.0"
 
 
 def utc_now() -> str:

@@ -8,6 +8,7 @@ from .advance_wave import advance_wave
 from .completion_report import record_completion_report
 from .doctor import run_doctor
 from .errors import error_json, ok
+from .export_wave import export_wave
 from .observe import observe
 from .planning import create_tasks, make_plan, scaffold_tasks_for_goal
 from .profile import build_repo_profile
@@ -17,6 +18,7 @@ from .schemas import (
     CHECKPOINT_SCHEMA,
     CREATE_TASKS_SCHEMA,
     DOCTOR_SCHEMA,
+    EXPORT_WAVE_SCHEMA,
     GET_SKILL_SCHEMA,
     OBSERVE_SCHEMA,
     PLAN_SCHEMA,
@@ -132,6 +134,18 @@ def _verify_tasks(args: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _export_wave(args: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "wave_export": export_wave(
+            args.get("cwd"),
+            args.get("wave_id"),
+            args.get("format", "json"),
+            args.get("output_path"),
+            args.get("include_evidence_contract", True),
+        )
+    }
+
+
 def register(ctx: Any) -> None:
     """Register Hermes tools.
 
@@ -150,4 +164,5 @@ def register(ctx: Any) -> None:
     _register_tool(ctx, "hermes_flywheel_remediate", TOOLSET, REMEDIATE_SCHEMA, _handler(_remediate), "Dry-run or apply safe local doctor remediations.")
     _register_tool(ctx, "hermes_flywheel_checkpoint", TOOLSET, CHECKPOINT_SCHEMA, _handler(_checkpoint), "Write an integrity-backed canonical local checkpoint.")
     _register_tool(ctx, "hermes_flywheel_verify_tasks", TOOLSET, VERIFY_TASKS_SCHEMA, _handler(_verify_tasks), "Read-only verification of task completion and evidence files.")
+    _register_tool(ctx, "hermes_flywheel_export_wave", TOOLSET, EXPORT_WAVE_SCHEMA, _handler(_export_wave), "Export a ready or started wave for external execution without mutating flywheel state.")
     _register_tool(ctx, "hermes_flywheel_get_skill", TOOLSET, GET_SKILL_SCHEMA, _handler(_get_skill), "Load a bundled flywheel skill document.")

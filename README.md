@@ -7,7 +7,7 @@ Product truth for this scaffold:
 - Local-first and safe by default.
 - Python stdlib only at runtime.
 - Stores state as JSON under `.hermes-flywheel/` in the current working directory.
-- Provides observation, repo profiling, planning/task graph creation, task lifecycle updates, evidence-gated wave advancement, standalone task verification, integrity checkpoints, review/completion reporting, doctor checks, safe remediation, and packaged skill text loading.
+- Provides observation, repo profiling, planning/task graph creation, task lifecycle updates, evidence-gated wave advancement, external wave export, standalone task verification, integrity checkpoints, review/completion reporting, doctor checks, safe remediation, and packaged skill text loading.
 - Does not run background execution substrate or call external services during normal tool handling.
 - Repository hosting/remotes are managed outside the plugin.
 
@@ -16,6 +16,7 @@ Product truth for this scaffold:
 - Observation/profile: inspect the target repository and persist local observations/profiles.
 - Planning/tasks: generate a simple plan, create task graphs, and update task status/notes/blockers.
 - Waves: advance the next ready task wave while blocking on incomplete prior started waves unless explicitly forced.
+- External export: export a ready or started wave as JSON or Markdown for an outside executor without creating workers, assignments, handoffs, or mutating task state.
 - Review/completion: validate completion reports and atomically persist successful task evidence under `.hermes-flywheel/completion/`.
 - Verification: read-only task verification against task status and matching completion report evidence.
 - Checkpoints: write integrity-backed canonical checkpoints plus historical state snapshots.
@@ -37,6 +38,7 @@ Product truth for this scaffold:
 - `hermes_flywheel_plugin/remediate.py` - dry-run-first safe local remediation actions.
 - `hermes_flywheel_plugin/planning.py` - plan/task graph creation.
 - `hermes_flywheel_plugin/advance_wave.py` - picks and advances the next wave of work with evidence gates.
+- `hermes_flywheel_plugin/export_wave.py` - read-only external wave export contract.
 - `hermes_flywheel_plugin/verification.py` - read-only task verification helper/tool contract.
 - `hermes_flywheel_plugin/skills_bundle.py` - packaged skill text loader.
 - `hermes_flywheel_plugin/skills/` - packaged starter skill documents.
@@ -66,7 +68,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-## Tool names registered in v0.8
+## Tool names registered in v0.9
 
 - `hermes_flywheel_observe`
 - `hermes_flywheel_profile`
@@ -79,6 +81,7 @@ pytest
 - `hermes_flywheel_remediate`
 - `hermes_flywheel_checkpoint`
 - `hermes_flywheel_verify_tasks`
+- `hermes_flywheel_export_wave`
 - `hermes_flywheel_get_skill`
 
 Handlers return JSON strings for Hermes compatibility.
@@ -95,6 +98,14 @@ Checkpoint contract:
 - Checkpoints include an integrity envelope whose `stateHash` is the SHA-256 of canonical JSON state; validation detects missing, invalid JSON, and hash-mismatched checkpoints.
 - A wave is considered complete only when each wave task has status `done` and its latest completion report has outcome `success`.
 - Tool handlers return structured JSON strings so Hermes can surface either `ok` results or normalized errors.
+
+External wave export contract:
+
+- `hermes_flywheel_export_wave` is an external execution export contract only. It does not launch workers, create assignments, create handoffs, mutate task status, fabricate completion evidence, run subprocesses, call networks, use tmux/NTM, or mutate git.
+- Inputs: `cwd?`, `wave_id?`, `format?` (`json` or `markdown`, default `json`), `output_path?`, and `include_evidence_contract?` (default `true`).
+- Explicit `wave_id` must exist and must reference a `ready` or `started` wave with task ids. Without `wave_id`, the latest `ready` or `started` wave with task ids is selected.
+- The export includes task specs, dependency context, evidence requirements, verification instructions, and external executor constraints.
+- If `output_path` is omitted, the tool returns content only and performs no writes. If `output_path` is provided, the path is resolved relative to the project root when needed, must remain inside the project root, and is written atomically. `.hermes-flywheel/exports/` is the recommended destination for operator-supplied paths.
 
 Remediation contract:
 
