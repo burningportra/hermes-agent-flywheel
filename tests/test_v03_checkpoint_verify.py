@@ -21,7 +21,7 @@ def test_checkpoint_writes_and_validates_canonical_envelope(tmp_path):
 
     envelope = json.loads(checkpoint_path.read_text(encoding="utf-8"))
     assert envelope["schemaVersion"] == 1
-    assert envelope["flywheelVersion"] == "0.3.0"
+    assert envelope["flywheelVersion"] == "0.4.0"
     assert envelope["state"]["observations"] == [{"note": "v03"}]
     assert envelope["stateHash"] == canonical_state_hash(envelope["state"])
 

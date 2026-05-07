@@ -1,4 +1,4 @@
-"""Lightweight Hermes tool schemas for the v0.2 flywheel plugin."""
+"""Lightweight Hermes tool schemas for the flywheel plugin."""
 
 OBSERVE_SCHEMA = {
     "type": "object",
@@ -66,6 +66,24 @@ REVIEW_SCHEMA = {
 }
 
 DOCTOR_SCHEMA = {"type": "object", "properties": {"cwd": {"type": "string"}}}
+
+REMEDIATE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "cwd": {"type": "string"},
+        "actions": {
+            "type": "array",
+            "items": {
+                "oneOf": [
+                    {"type": "string"},
+                    {"type": "object"},
+                ]
+            },
+        },
+        "dry_run": {"type": "boolean"},
+        "include_unsafe": {"type": "boolean"},
+    },
+}
 
 CHECKPOINT_SCHEMA = {
     "type": "object",

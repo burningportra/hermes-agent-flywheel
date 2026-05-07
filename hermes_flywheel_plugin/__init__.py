@@ -11,6 +11,7 @@ from .errors import error_json, ok
 from .observe import observe
 from .planning import create_tasks, make_plan, scaffold_tasks_for_goal
 from .profile import build_repo_profile
+from .remediate import remediate
 from .schemas import (
     ADVANCE_WAVE_SCHEMA,
     CHECKPOINT_SCHEMA,
@@ -20,6 +21,7 @@ from .schemas import (
     OBSERVE_SCHEMA,
     PLAN_SCHEMA,
     PROFILE_SCHEMA,
+    REMEDIATE_SCHEMA,
     REVIEW_SCHEMA,
     UPDATE_TASK_SCHEMA,
     VERIFY_TASKS_SCHEMA,
@@ -83,6 +85,17 @@ def _doctor(args: dict[str, Any]) -> dict[str, Any]:
     return {"doctor": run_doctor(args.get("cwd"))}
 
 
+def _remediate(args: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "remediation": remediate(
+            args.get("cwd"),
+            args.get("actions"),
+            args.get("dry_run", True),
+            args.get("include_unsafe", False),
+        )
+    }
+
+
 def _get_skill(args: dict[str, Any]) -> dict[str, Any]:
     return {"skill": get_skill(args.get("name", ""))}
 
@@ -116,6 +129,7 @@ def register(ctx: Any) -> None:
     ctx.register_tool("hermes_flywheel_update_task", TOOLSET, UPDATE_TASK_SCHEMA, _handler(_update_task), "Update a task status plus optional lifecycle notes and blocker fields.")
     ctx.register_tool("hermes_flywheel_review", TOOLSET, REVIEW_SCHEMA, _handler(_review), "Validate and record a completion report.")
     ctx.register_tool("hermes_flywheel_doctor", TOOLSET, DOCTOR_SCHEMA, _handler(_doctor), "Run local health checks for the flywheel plugin state.")
+    ctx.register_tool("hermes_flywheel_remediate", TOOLSET, REMEDIATE_SCHEMA, _handler(_remediate), "Dry-run or apply safe local doctor remediations.")
     ctx.register_tool("hermes_flywheel_checkpoint", TOOLSET, CHECKPOINT_SCHEMA, _handler(_checkpoint), "Write an integrity-backed canonical local checkpoint.")
     ctx.register_tool("hermes_flywheel_verify_tasks", TOOLSET, VERIFY_TASKS_SCHEMA, _handler(_verify_tasks), "Read-only verification of task completion and evidence files.")
     ctx.register_tool("hermes_flywheel_get_skill", TOOLSET, GET_SKILL_SCHEMA, _handler(_get_skill), "Load a bundled flywheel skill document.")

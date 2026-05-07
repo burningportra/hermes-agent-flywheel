@@ -2,16 +2,22 @@
 
 Hermes Agent Flywheel is a local-first Hermes plugin for an agent-flywheel/pi-orchestrator style workflow loop.
 
-v0.3 keeps the runtime stdlib-only and adds integrity-backed checkpoints plus standalone task verification so parent agents can verify one wave before starting the next.
+v0.4 keeps the runtime stdlib-only and splits diagnosis from remediation: doctor is read-oriented and reports stable remediation ids, while remediate dry-runs by default and only applies safe local filesystem/checkpoint repairs when explicitly requested.
 
 Product truth for this scaffold:
 
 - Local-first and safe by default.
 - Python stdlib only at runtime.
 - Stores state as JSON under `.hermes-flywheel/` in the current working directory.
-- Provides observation, repo profiling, planning/task graph creation, task lifecycle updates, evidence-gated wave advancement, standalone task verification, integrity checkpoints, review/completion reporting, doctor checks, and packaged skill text loading.
+- Provides observation, repo profiling, planning/task graph creation, task lifecycle updates, evidence-gated wave advancement, standalone task verification, integrity checkpoints, review/completion reporting, doctor checks, safe remediation, and packaged skill text loading.
 - Does not spawn agents or call external services during normal tool handling; repository hosting/remotes are managed outside the plugin.
 - Intended to be commit-worthy scaffolding, not a complete production orchestrator.
+
+## v0.4 capabilities
+
+- Doctor/remediate split: `hermes_flywheel_doctor` now returns `schemaVersion: 2`, severity/category on checks, and a stable ordered `remediations` list.
+- Safe remediation workflow: `hermes_flywheel_remediate` defaults to `dry_run: true` and performs no writes. With `dry_run: false`, it can create `.hermes-flywheel/`, `.hermes-flywheel/completion/`, `.hermes-flywheel/checkpoints/`, and write/refresh/rewrite the canonical checkpoint through `StateStore.checkpoint`.
+- Operator actions remain manual: incomplete started waves surface `resolve_incomplete_started_wave` as an operator action and remediation skips it rather than changing task or wave state.
 
 ## v0.3 capabilities
 
@@ -38,7 +44,8 @@ Product truth for this scaffold:
 - `hermes_flywheel_plugin/task_lifecycle.py` - task status/notes/blocker updates.
 - `hermes_flywheel_plugin/completion_report.py` - completion report validation and atomic success report files.
 - `hermes_flywheel_plugin/observe.py` - local repo observation.
-- `hermes_flywheel_plugin/doctor.py` - environment and state checks.
+- `hermes_flywheel_plugin/doctor.py` - environment and state checks plus stable remediation recommendations.
+- `hermes_flywheel_plugin/remediate.py` - dry-run-first safe local remediation actions.
 - `hermes_flywheel_plugin/planning.py` - plan/task graph creation.
 - `hermes_flywheel_plugin/advance_wave.py` - picks and advances the next wave of work with evidence gates.
 - `hermes_flywheel_plugin/verification.py` - read-only task verification helper/tool contract.
@@ -70,7 +77,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-## Tool names registered in v0.3
+## Tool names registered in v0.4
 
 - `hermes_flywheel_observe`
 - `hermes_flywheel_profile`
@@ -80,6 +87,7 @@ pytest
 - `hermes_flywheel_advance_wave`
 - `hermes_flywheel_review`
 - `hermes_flywheel_doctor`
+- `hermes_flywheel_remediate`
 - `hermes_flywheel_checkpoint`
 - `hermes_flywheel_verify_tasks`
 - `hermes_flywheel_get_skill`
@@ -98,6 +106,12 @@ Checkpoint contract:
 - Checkpoints include an integrity envelope whose `stateHash` is the SHA-256 of canonical JSON state; validation detects missing, invalid JSON, and hash-mismatched checkpoints.
 - A wave is considered complete only when each wave task has status `done` and its latest completion report has outcome `success`.
 - Tool handlers return structured JSON strings so Hermes can surface either `ok` results or normalized errors.
+
+Remediation contract:
+
+- `hermes_flywheel_remediate` is dry-run by default and must be called with `dry_run: false` to write anything.
+- Safe actions are local-only directory creation and checkpoint writes via the state store.
+- Unknown remediation ids return structured per-action errors; operator actions are reported as skipped.
 
 ## Roadmap
 

@@ -35,6 +35,7 @@ def test_register_smoke_with_fake_context(tmp_path):
         "hermes_flywheel_update_task",
         "hermes_flywheel_review",
         "hermes_flywheel_doctor",
+        "hermes_flywheel_remediate",
         "hermes_flywheel_checkpoint",
         "hermes_flywheel_verify_tasks",
         "hermes_flywheel_get_skill",
@@ -50,10 +51,11 @@ def test_register_smoke_with_fake_context(tmp_path):
     assert payload["observation"]["note"] == "smoke"
 
 
-def test_plugin_yaml_lists_v03_tools():
+def test_plugin_yaml_lists_v04_tools():
     plugin_yaml = Path(__file__).resolve().parents[1] / "hermes_flywheel_plugin" / "plugin.yaml"
     text = plugin_yaml.read_text(encoding="utf-8")
 
-    assert "version: 0.3.0" in text
+    assert "version: 0.4.0" in text
+    assert "  - hermes_flywheel_remediate" in text
     assert "  - hermes_flywheel_checkpoint" in text
     assert "  - hermes_flywheel_verify_tasks" in text

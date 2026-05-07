@@ -1,7 +1,8 @@
-"""Doctor checks."""
+"""Doctor checks and remediation recommendations."""
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -9,74 +10,228 @@ from typing import Any
 from .advance_wave import incomplete_started_wave
 from .state import StateStore
 
+DOCTOR_SCHEMA_VERSION = 2
+
+REMEDIATION_DEFINITIONS: dict[str, dict[str, Any]] = {
+    "ensure_state_dir": {
+        "id": "ensure_state_dir",
+        "action": "ensure_directory",
+        "path": ".hermes-flywheel",
+        "safe": True,
+        "category": "filesystem",
+        "description": "Create the local flywheel state directory.",
+    },
+    "ensure_completion_report_dir": {
+        "id": "ensure_completion_report_dir",
+        "action": "ensure_directory",
+        "path": ".hermes-flywheel/completion",
+        "safe": True,
+        "category": "filesystem",
+        "description": "Create the local completion report directory.",
+    },
+    "ensure_checkpoints_dir": {
+        "id": "ensure_checkpoints_dir",
+        "action": "ensure_directory",
+        "path": ".hermes-flywheel/checkpoints",
+        "safe": True,
+        "category": "filesystem",
+        "description": "Create the local checkpoint history directory.",
+    },
+    "write_missing_checkpoint": {
+        "id": "write_missing_checkpoint",
+        "action": "write_checkpoint",
+        "safe": True,
+        "category": "checkpoint",
+        "description": "Write the missing canonical checkpoint from current local state.",
+    },
+    "refresh_stale_checkpoint": {
+        "id": "refresh_stale_checkpoint",
+        "action": "refresh_checkpoint",
+        "safe": True,
+        "category": "checkpoint",
+        "description": "Refresh the canonical checkpoint so it matches current local state.",
+    },
+    "rewrite_invalid_checkpoint": {
+        "id": "rewrite_invalid_checkpoint",
+        "action": "rewrite_checkpoint",
+        "safe": True,
+        "category": "checkpoint",
+        "description": "Rewrite an invalid canonical checkpoint from current local state.",
+    },
+    "resolve_incomplete_started_wave": {
+        "id": "resolve_incomplete_started_wave",
+        "action": "operator_action",
+        "safe": False,
+        "category": "workflow",
+        "description": "Operator must finish, block, or explicitly override the incomplete started wave.",
+    },
+}
+
+
+def _remediation(remediation_id: str, **extra: Any) -> dict[str, Any]:
+    remediation = dict(REMEDIATION_DEFINITIONS[remediation_id])
+    remediation.update(extra)
+    return remediation
+
+
+def _add_remediation(remediations: list[dict[str, Any]], remediation_id: str, **extra: Any) -> None:
+    if any(item["id"] == remediation_id for item in remediations):
+        return
+    remediations.append(_remediation(remediation_id, **extra))
+
+
+def _check(
+    checks: list[dict[str, Any]],
+    name: str,
+    ok: bool,
+    detail: str,
+    *,
+    severity: str = "info",
+    category: str = "environment",
+    data: dict[str, Any] | None = None,
+    remediations: list[str] | None = None,
+) -> None:
+    check: dict[str, Any] = {
+        "name": name,
+        "ok": ok,
+        "severity": "info" if ok else severity,
+        "category": category,
+        "detail": detail,
+    }
+    if data is not None:
+        check["data"] = data
+    if remediations:
+        check["remediations"] = remediations
+    checks.append(check)
+
 
 def run_doctor(cwd: str | Path | None = None) -> dict[str, Any]:
     root = Path(cwd or Path.cwd()).resolve()
     store = StateStore.for_cwd(root)
-    checks = []
+    checks: list[dict[str, Any]] = []
+    remediations: list[dict[str, Any]] = []
 
-    checks.append({"name": "python_version", "ok": sys.version_info >= (3, 10), "detail": sys.version.split()[0]})
-    checks.append({"name": "root_exists", "ok": root.exists(), "detail": str(root)})
-    checks.append({"name": "root_writable", "ok": root.exists() and os_access_write(root), "detail": str(root)})
-    checks.append({"name": "state_dir", "ok": store.state_dir.exists(), "detail": str(store.state_dir)})
+    _check(checks, "python_version", sys.version_info >= (3, 10), sys.version.split()[0], severity="error", category="environment")
+    _check(checks, "root_exists", root.exists(), str(root), severity="error", category="filesystem")
+    _check(checks, "root_writable", root.exists() and os_access_write(root), str(root), severity="error", category="filesystem")
 
+    state_dir_ok = store.state_dir.exists() and store.state_dir.is_dir()
+    if not state_dir_ok:
+        _add_remediation(remediations, "ensure_state_dir", target=str(store.state_dir))
+    _check(
+        checks,
+        "state_dir",
+        state_dir_ok,
+        str(store.state_dir),
+        severity="warning",
+        category="filesystem",
+        remediations=[] if state_dir_ok else ["ensure_state_dir"],
+    )
+
+    state_load_ok = False
     try:
         state = store.load()
-        checks.append({"name": "state_load", "ok": True, "detail": f"version={state.get('version')}"})
+        state_load_ok = True
+        _check(checks, "state_load", True, f"version={state.get('version')}", category="state")
         blocker = incomplete_started_wave(state, root)
         if blocker:
-            checks.append(
-                {
-                    "name": "active_wave_complete",
-                    "ok": False,
-                    "detail": f"{blocker['wave_id']} incomplete tasks: {', '.join(blocker['incomplete_task_ids'])}",
-                    "data": blocker,
-                }
+            _add_remediation(remediations, "resolve_incomplete_started_wave", data=blocker)
+            _check(
+                checks,
+                "active_wave_complete",
+                False,
+                f"{blocker['wave_id']} incomplete tasks: {', '.join(blocker['incomplete_task_ids'])}",
+                severity="warning",
+                category="workflow",
+                data=blocker,
+                remediations=["resolve_incomplete_started_wave"],
             )
         else:
-            checks.append({"name": "active_wave_complete", "ok": True, "detail": "no incomplete started wave"})
+            _check(checks, "active_wave_complete", True, "no incomplete started wave", category="workflow")
     except Exception as exc:  # noqa: BLE001 - doctor should report failures as data
-        checks.append({"name": "state_load", "ok": False, "detail": str(exc)})
+        _check(checks, "state_load", False, str(exc), severity="error", category="state")
 
     checkpoint = store.validate_checkpoint()
+    checkpoint_remediation = None
     if checkpoint.get("reason") == "missing":
-        checks.append({"name": "checkpoint_valid", "ok": False, "detail": "missing canonical checkpoint", "data": checkpoint})
+        checkpoint_remediation = "write_missing_checkpoint" if state_load_ok else None
+        if checkpoint_remediation:
+            _add_remediation(remediations, checkpoint_remediation, target=str(store.checkpoint_path))
+        _check(
+            checks,
+            "checkpoint_valid",
+            False,
+            "missing canonical checkpoint",
+            severity="warning",
+            category="checkpoint",
+            data=checkpoint,
+            remediations=[] if checkpoint_remediation is None else [checkpoint_remediation],
+        )
     elif checkpoint.get("ok"):
-        checks.append(
-            {
-                "name": "checkpoint_valid",
-                "ok": True,
-                "detail": "current" if checkpoint.get("current") else "valid but not current",
-                "data": checkpoint,
-            }
+        current = bool(checkpoint.get("current"))
+        if not current and state_load_ok:
+            checkpoint_remediation = "refresh_stale_checkpoint"
+            _add_remediation(remediations, checkpoint_remediation, target=str(store.checkpoint_path))
+        _check(
+            checks,
+            "checkpoint_valid",
+            current,
+            "current" if current else "valid but not current",
+            severity="warning",
+            category="checkpoint",
+            data=checkpoint,
+            remediations=[] if checkpoint_remediation is None else [checkpoint_remediation],
         )
     else:
-        checks.append(
-            {
-                "name": "checkpoint_valid",
-                "ok": False,
-                "detail": str(checkpoint.get("reason") or "invalid checkpoint"),
-                "data": checkpoint,
-            }
+        checkpoint_remediation = "rewrite_invalid_checkpoint" if state_load_ok else None
+        if checkpoint_remediation:
+            _add_remediation(remediations, checkpoint_remediation, target=str(store.checkpoint_path))
+        _check(
+            checks,
+            "checkpoint_valid",
+            False,
+            str(checkpoint.get("reason") or "invalid checkpoint"),
+            severity="error",
+            category="checkpoint",
+            data=checkpoint,
+            remediations=[] if checkpoint_remediation is None else [checkpoint_remediation],
         )
 
     completion_dir = store.state_dir / "completion"
-    checks.append(
-        {
-            "name": "completion_report_dir",
-            "ok": completion_dir.exists() and completion_dir.is_dir(),
-            "detail": str(completion_dir),
-        }
+    completion_ok = completion_dir.exists() and completion_dir.is_dir()
+    if not completion_ok:
+        _add_remediation(remediations, "ensure_completion_report_dir", target=str(completion_dir))
+    _check(
+        checks,
+        "completion_report_dir",
+        completion_ok,
+        str(completion_dir),
+        severity="warning",
+        category="filesystem",
+        remediations=[] if completion_ok else ["ensure_completion_report_dir"],
     )
 
-    return {"ok": all(check["ok"] for check in checks), "root": str(root), "checks": checks}
+    checkpoints_ok = store.checkpoints_dir.exists() and store.checkpoints_dir.is_dir()
+    if not checkpoints_ok:
+        _add_remediation(remediations, "ensure_checkpoints_dir", target=str(store.checkpoints_dir))
+    _check(
+        checks,
+        "checkpoints_dir",
+        checkpoints_ok,
+        str(store.checkpoints_dir),
+        severity="warning",
+        category="filesystem",
+        remediations=[] if checkpoints_ok else ["ensure_checkpoints_dir"],
+    )
+
+    return {
+        "schemaVersion": DOCTOR_SCHEMA_VERSION,
+        "ok": all(check["ok"] for check in checks),
+        "root": str(root),
+        "checks": checks,
+        "remediations": remediations,
+    }
 
 
 def os_access_write(path: Path) -> bool:
-    try:
-        probe = path / ".hermes-flywheel-write-test"
-        probe.write_text("ok", encoding="utf-8")
-        probe.unlink()
-        return True
-    except OSError:
-        return False
+    return os.access(path, os.W_OK)
