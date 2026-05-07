@@ -110,6 +110,8 @@ EXPORT_WAVE_SCHEMA = {
     },
 }
 
+STATUS_SCHEMA = {"type": "object", "properties": {"cwd": {"type": "string"}}}
+
 GET_SKILL_SCHEMA = {
     "type": "object",
     "properties": {"name": {"type": "string", "enum": ["start", "planning", "review"]}},

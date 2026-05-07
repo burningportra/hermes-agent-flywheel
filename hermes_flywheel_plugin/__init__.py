@@ -25,11 +25,13 @@ from .schemas import (
     PROFILE_SCHEMA,
     REMEDIATE_SCHEMA,
     REVIEW_SCHEMA,
+    STATUS_SCHEMA,
     UPDATE_TASK_SCHEMA,
     VERIFY_TASKS_SCHEMA,
 )
 from .skills_bundle import get_skill
 from .state import StateStore
+from .status import flywheel_status
 from .task_lifecycle import update_task
 from .verification import verify_tasks
 
@@ -146,6 +148,10 @@ def _export_wave(args: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _status(args: dict[str, Any]) -> dict[str, Any]:
+    return {"status": flywheel_status(args.get("cwd"))}
+
+
 def register(ctx: Any) -> None:
     """Register Hermes tools.
 
@@ -165,4 +171,5 @@ def register(ctx: Any) -> None:
     _register_tool(ctx, "hermes_flywheel_checkpoint", TOOLSET, CHECKPOINT_SCHEMA, _handler(_checkpoint), "Write an integrity-backed canonical local checkpoint.")
     _register_tool(ctx, "hermes_flywheel_verify_tasks", TOOLSET, VERIFY_TASKS_SCHEMA, _handler(_verify_tasks), "Read-only verification of task completion and evidence files.")
     _register_tool(ctx, "hermes_flywheel_export_wave", TOOLSET, EXPORT_WAVE_SCHEMA, _handler(_export_wave), "Export a ready or started wave for external execution without mutating flywheel state.")
+    _register_tool(ctx, "hermes_flywheel_status", TOOLSET, STATUS_SCHEMA, _handler(_status), "Read-only flywheel status summary for external supervisors.")
     _register_tool(ctx, "hermes_flywheel_get_skill", TOOLSET, GET_SKILL_SCHEMA, _handler(_get_skill), "Load a bundled flywheel skill document.")

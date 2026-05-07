@@ -1,6 +1,6 @@
 name: hermes-flywheel
-version: 0.9.0
-description: Local-first Hermes flywheel plugin for planning, profiling, task/wave state, checkpoints, doctor/remediate, and review
+version: 1.0.0
+description: Local-first Hermes flywheel plugin for planning, profiling, task/wave state, status, checkpoints, doctor/remediate, and review
 entrypoint: hermes_flywheel_plugin:register
 tools:
   - hermes_flywheel_observe
@@ -15,4 +15,5 @@ tools:
   - hermes_flywheel_checkpoint
   - hermes_flywheel_verify_tasks
   - hermes_flywheel_export_wave
+  - hermes_flywheel_status
   - hermes_flywheel_get_skill

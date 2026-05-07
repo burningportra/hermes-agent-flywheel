@@ -7,7 +7,7 @@ Product truth for this scaffold:
 - Local-first and safe by default.
 - Python stdlib only at runtime.
 - Stores state as JSON under `.hermes-flywheel/` in the current working directory.
-- Provides observation, repo profiling, planning/task graph creation, task lifecycle updates, evidence-gated wave advancement, external wave export, standalone task verification, integrity checkpoints, review/completion reporting, doctor checks, safe remediation, and packaged skill text loading.
+- Provides observation, repo profiling, planning/task graph creation, task lifecycle updates, evidence-gated wave advancement, external wave export, read-only supervisor status, standalone task verification, integrity checkpoints, review/completion reporting, doctor checks, safe remediation, and packaged skill text loading.
 - Does not run background execution substrate or call external services during normal tool handling.
 - Repository hosting/remotes are managed outside the plugin.
 
@@ -17,6 +17,7 @@ Product truth for this scaffold:
 - Planning/tasks: generate a simple plan, create task graphs, and update task status/notes/blockers.
 - Waves: advance the next ready task wave while blocking on incomplete prior started waves unless explicitly forced.
 - External export: export a ready or started wave as JSON or Markdown for an outside executor without creating workers, assignments, handoffs, or mutating task state.
+- Status: return a read-only summary of state, task/wave counts, active blockers, exportable wave, checkpoint health, and the suggested next tool for an external supervisor.
 - Review/completion: validate completion reports and atomically persist successful task evidence under `.hermes-flywheel/completion/`.
 - Verification: read-only task verification against task status and matching completion report evidence.
 - Checkpoints: write integrity-backed canonical checkpoints plus historical state snapshots.
@@ -39,6 +40,7 @@ Product truth for this scaffold:
 - `hermes_flywheel_plugin/planning.py` - plan/task graph creation.
 - `hermes_flywheel_plugin/advance_wave.py` - picks and advances the next wave of work with evidence gates.
 - `hermes_flywheel_plugin/export_wave.py` - read-only external wave export contract.
+- `hermes_flywheel_plugin/status.py` - read-only supervisor status summary.
 - `hermes_flywheel_plugin/verification.py` - read-only task verification helper/tool contract.
 - `hermes_flywheel_plugin/skills_bundle.py` - packaged skill text loader.
 - `hermes_flywheel_plugin/skills/` - packaged starter skill documents.
@@ -68,7 +70,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-## Tool names registered in v0.9
+## Tool names registered in v1.0
 
 - `hermes_flywheel_observe`
 - `hermes_flywheel_profile`
@@ -82,6 +84,7 @@ pytest
 - `hermes_flywheel_checkpoint`
 - `hermes_flywheel_verify_tasks`
 - `hermes_flywheel_export_wave`
+- `hermes_flywheel_status`
 - `hermes_flywheel_get_skill`
 
 Handlers return JSON strings for Hermes compatibility.
@@ -106,6 +109,13 @@ External wave export contract:
 - Explicit `wave_id` must exist and must reference a `ready` or `started` wave with task ids. Without `wave_id`, the latest `ready` or `started` wave with task ids is selected.
 - The export includes task specs, dependency context, evidence requirements, verification instructions, and external executor constraints.
 - If `output_path` is omitted, the tool returns content only and performs no writes. If `output_path` is provided, the path is resolved relative to the project root when needed, must remain inside the project root, and is written atomically. `.hermes-flywheel/exports/` is the recommended destination for operator-supplied paths.
+
+External integration/status contract:
+
+- `hermes_flywheel_status` is read-only. It does not create state, write checkpoints, export files, mark tasks complete, spawn subprocesses, call networks, use tmux/NTM, mutate git, or fabricate evidence.
+- It summarizes `.hermes-flywheel/state.json`, task and wave status counts, the oldest started wave still missing success evidence, the latest ready/started exportable wave, checkpoint validation, and a suggested `next_tool`.
+- Supervisors can use the status loop safely: `status` -> `plan/create_tasks` when no tasks exist -> `advance_wave` -> `export_wave` for external execution -> `review` with explicit completion reports -> `verify_tasks` -> `checkpoint`.
+- Integrations with Hermes subagents, GitHub Issues, Beads, Agent Mail, Linear, or humans should live outside the plugin and drive only explicit plugin tools. The plugin remains the local planning/verification nucleus, not an execution runtime.
 
 Remediation contract:
 
