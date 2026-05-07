@@ -2,7 +2,7 @@ import json
 
 from hermes_flywheel_plugin.completion_report import record_completion_report, safe_report_filename
 from hermes_flywheel_plugin.planning import create_tasks
-from hermes_flywheel_plugin.state import StateStore, canonical_state_hash
+from hermes_flywheel_plugin.state import FLYWHEEL_VERSION, StateStore, canonical_state_hash
 from hermes_flywheel_plugin.verification import verify_tasks
 
 
@@ -21,7 +21,7 @@ def test_checkpoint_writes_and_validates_canonical_envelope(tmp_path):
 
     envelope = json.loads(checkpoint_path.read_text(encoding="utf-8"))
     assert envelope["schemaVersion"] == 1
-    assert envelope["flywheelVersion"] == "0.5.0"
+    assert envelope["flywheelVersion"] == FLYWHEEL_VERSION
     assert envelope["state"]["observations"] == [{"note": "v03"}]
     assert envelope["stateHash"] == canonical_state_hash(envelope["state"])
 

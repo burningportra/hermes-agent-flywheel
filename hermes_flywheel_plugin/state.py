@@ -18,7 +18,7 @@ STATE_DIR = ".hermes-flywheel"
 STATE_FILE = "state.json"
 CHECKPOINT_FILE = "checkpoint.json"
 CHECKPOINT_SCHEMA_VERSION = 1
-FLYWHEEL_VERSION = "0.5.0"
+FLYWHEEL_VERSION = "0.6.0"
 
 
 def utc_now() -> str:
@@ -40,6 +40,8 @@ def default_state() -> dict[str, Any]:
         "checkpoints": [],
         "workers": [],
         "worker_events": [],
+        "assignments": [],
+        "assignment_events": [],
     }
 
 

@@ -77,6 +77,17 @@ LIST_WORKERS_SCHEMA = {
     },
 }
 
+ASSIGN_WAVE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "cwd": {"type": "string"},
+        "wave_id": {"type": "string"},
+        "runtime": {"type": "string", "enum": ["noop"]},
+        "worker_name_prefix": {"type": "string"},
+        "metadata": {"type": "object"},
+    },
+}
+
 REVIEW_SCHEMA = {
     "type": "object",
     "properties": {

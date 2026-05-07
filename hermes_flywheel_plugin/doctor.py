@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .advance_wave import incomplete_started_wave
+from .assignment import assignment_summary
 from .state import StateStore
 from .worker_runtime import worker_summary
 
@@ -159,6 +160,8 @@ def run_doctor(cwd: str | Path | None = None) -> dict[str, Any]:
 
         workers = state.get("workers", [])
         worker_events = state.get("worker_events", [])
+        assignments = state.get("assignments", [])
+        assignment_events = state.get("assignment_events", [])
         worker_shape_ok = isinstance(workers, list) and isinstance(worker_events, list)
         _check(
             checks,
@@ -185,6 +188,16 @@ def run_doctor(cwd: str | Path | None = None) -> dict[str, Any]:
                 )
             else:
                 _check(checks, "active_workers", True, f"active={len(summary.get('active', []))}", category="worker", data=summary)
+        assignment_shape_ok = isinstance(assignments, list) and isinstance(assignment_events, list)
+        _check(
+            checks,
+            "assignment_state_shape",
+            assignment_shape_ok,
+            "assignments and assignment_events are lists" if assignment_shape_ok else "assignments and assignment_events must be lists",
+            severity="error",
+            category="assignment",
+            data=assignment_summary(state) if assignment_shape_ok else None,
+        )
     except Exception as exc:  # noqa: BLE001 - doctor should report failures as data
         _check(checks, "state_load", False, str(exc), severity="error", category="state")
 
