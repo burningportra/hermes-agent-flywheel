@@ -1,0 +1,4 @@
+name: hermes-flywheel
+version: 0.1.0
+description: Local-first Hermes flywheel orchestration MVP plugin
+entrypoint: hermes_flywheel_plugin:register
