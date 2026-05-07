@@ -22,7 +22,7 @@ def normalize_task(raw: dict[str, Any], index: int = 0) -> dict[str, Any]:
     status = str(raw.get("status") or "pending")
     if status not in VALID_STATUSES:
         raise FlywheelError("task_invalid_status", "Task status is not valid.", {"task_id": task_id, "status": status})
-    return {
+    task = {
         "id": task_id,
         "title": title,
         "description": str(raw.get("description") or ""),
@@ -31,6 +31,10 @@ def normalize_task(raw: dict[str, Any], index: int = 0) -> dict[str, Any]:
         "created_at": raw.get("created_at") or utc_now(),
         "updated_at": raw.get("updated_at") or utc_now(),
     }
+    for field in ("notes", "blocker"):
+        if field in raw:
+            task[field] = str(raw.get(field) or "")
+    return task
 
 
 def create_task_graph(tasks: list[dict[str, Any]]) -> dict[str, Any]:
@@ -71,3 +75,30 @@ def mark_tasks(graph: dict[str, Any], task_ids: list[str], status: str) -> dict[
         known[task_id]["status"] = status
         known[task_id]["updated_at"] = utc_now()
     return graph
+
+
+def update_task_fields(
+    graph: dict[str, Any],
+    task_id: str,
+    status: str | None = None,
+    notes: str | None = None,
+    blocker: str | None = None,
+) -> dict[str, Any]:
+    task_id = str(task_id or "").strip()
+    if not task_id:
+        raise FlywheelError("task_missing_id", "Task update requires task_id.", {})
+    known = {task["id"]: task for task in graph.get("tasks", [])}
+    if task_id not in known:
+        raise FlywheelError("task_unknown_id", "Cannot update unknown task id.", {"task_id": task_id})
+    task = known[task_id]
+    if status is not None:
+        status = str(status).strip()
+        if status not in VALID_STATUSES:
+            raise FlywheelError("task_invalid_status", "Task status is not valid.", {"task_id": task_id, "status": status})
+        task["status"] = status
+    if notes is not None:
+        task["notes"] = str(notes)
+    if blocker is not None:
+        task["blocker"] = str(blocker)
+    task["updated_at"] = utc_now()
+    return task

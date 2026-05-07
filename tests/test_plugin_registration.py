@@ -31,6 +31,7 @@ def test_register_smoke_with_fake_context(tmp_path):
         "hermes_flywheel_plan",
         "hermes_flywheel_create_tasks",
         "hermes_flywheel_advance_wave",
+        "hermes_flywheel_update_task",
         "hermes_flywheel_review",
         "hermes_flywheel_doctor",
         "hermes_flywheel_get_skill",

@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .advance_wave import incomplete_started_wave
 from .state import StateStore
 
 
@@ -22,8 +23,29 @@ def run_doctor(cwd: str | Path | None = None) -> dict[str, Any]:
     try:
         state = store.load()
         checks.append({"name": "state_load", "ok": True, "detail": f"version={state.get('version')}"})
+        blocker = incomplete_started_wave(state)
+        if blocker:
+            checks.append(
+                {
+                    "name": "active_wave_complete",
+                    "ok": False,
+                    "detail": f"{blocker['wave_id']} incomplete tasks: {', '.join(blocker['incomplete_task_ids'])}",
+                    "data": blocker,
+                }
+            )
+        else:
+            checks.append({"name": "active_wave_complete", "ok": True, "detail": "no incomplete started wave"})
     except Exception as exc:  # noqa: BLE001 - doctor should report failures as data
         checks.append({"name": "state_load", "ok": False, "detail": str(exc)})
+
+    completion_dir = store.state_dir / "completion"
+    checks.append(
+        {
+            "name": "completion_report_dir",
+            "ok": completion_dir.exists() and completion_dir.is_dir(),
+            "detail": str(completion_dir),
+        }
+    )
 
     return {"ok": all(check["ok"] for check in checks), "root": str(root), "checks": checks}
 

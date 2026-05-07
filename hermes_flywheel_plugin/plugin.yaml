@@ -1,4 +1,14 @@
 name: hermes-flywheel
-version: 0.1.0
-description: Local-first Hermes flywheel orchestration MVP plugin
+version: 0.2.0
+description: Local-first Hermes flywheel orchestration plugin with evidence-gated waves
 entrypoint: hermes_flywheel_plugin:register
+tools:
+  - hermes_flywheel_observe
+  - hermes_flywheel_profile
+  - hermes_flywheel_plan
+  - hermes_flywheel_create_tasks
+  - hermes_flywheel_update_task
+  - hermes_flywheel_advance_wave
+  - hermes_flywheel_review
+  - hermes_flywheel_doctor
+  - hermes_flywheel_get_skill

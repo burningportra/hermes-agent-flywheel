@@ -1,4 +1,4 @@
-"""Lightweight Hermes tool schemas for the MVP."""
+"""Lightweight Hermes tool schemas for the v0.2 flywheel plugin."""
 
 OBSERVE_SCHEMA = {
     "type": "object",
@@ -23,14 +23,44 @@ CREATE_TASKS_SCHEMA = {
 
 ADVANCE_WAVE_SCHEMA = {
     "type": "object",
-    "properties": {"cwd": {"type": "string"}, "limit": {"type": "integer"}, "start": {"type": "boolean"}},
+    "properties": {
+        "cwd": {"type": "string"},
+        "limit": {"type": "integer"},
+        "start": {"type": "boolean"},
+        "force": {"type": "boolean"},
+    },
+}
+
+UPDATE_TASK_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "cwd": {"type": "string"},
+        "task_id": {"type": "string"},
+        "status": {"type": "string", "enum": ["pending", "ready", "in_progress", "blocked", "done"]},
+        "notes": {"type": "string"},
+        "blocker": {"type": "string"},
+    },
+    "required": ["task_id"],
 }
 
 REVIEW_SCHEMA = {
     "type": "object",
     "properties": {
         "cwd": {"type": "string"},
-        "report": {"type": "object"},
+        "report": {
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "string"},
+                "outcome": {"type": "string", "enum": ["success", "partial", "blocked", "failed"]},
+                "summary": {"type": "string"},
+                "changed_files": {"type": "array", "items": {"type": "string"}},
+                "verification": {"type": "array", "items": {"type": "string"}},
+                "self_review": {"type": "string"},
+                "reservations_released": {"type": "boolean"},
+                "artifacts": {"type": "array"},
+                "created_at": {"type": "string"},
+            },
+        },
     },
     "required": ["report"],
 }

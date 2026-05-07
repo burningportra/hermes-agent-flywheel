@@ -20,9 +20,11 @@ from .schemas import (
     PLAN_SCHEMA,
     PROFILE_SCHEMA,
     REVIEW_SCHEMA,
+    UPDATE_TASK_SCHEMA,
 )
 from .skills_bundle import get_skill
 from .state import StateStore
+from .task_lifecycle import update_task
 
 TOOLSET = "hermes_flywheel"
 
@@ -63,7 +65,11 @@ def _create_tasks(args: dict[str, Any]) -> dict[str, Any]:
 
 
 def _advance_wave(args: dict[str, Any]) -> dict[str, Any]:
-    return advance_wave(args.get("cwd"), args.get("limit", 3), args.get("start", True))
+    return advance_wave(args.get("cwd"), args.get("limit", 3), args.get("start", True), args.get("force", False))
+
+
+def _update_task(args: dict[str, Any]) -> dict[str, Any]:
+    return update_task(args.get("cwd"), args.get("task_id", ""), args.get("status"), args.get("notes"), args.get("blocker"))
 
 
 def _review(args: dict[str, Any]) -> dict[str, Any]:
@@ -93,7 +99,8 @@ def register(ctx: Any) -> None:
     ctx.register_tool("hermes_flywheel_profile", TOOLSET, PROFILE_SCHEMA, _handler(_profile), "Build and persist a lightweight local repository profile.")
     ctx.register_tool("hermes_flywheel_plan", TOOLSET, PLAN_SCHEMA, _handler(_plan), "Create a simple flywheel plan, optionally with scaffold tasks.")
     ctx.register_tool("hermes_flywheel_create_tasks", TOOLSET, CREATE_TASKS_SCHEMA, _handler(_create_tasks), "Create or replace the local flywheel task graph.")
-    ctx.register_tool("hermes_flywheel_advance_wave", TOOLSET, ADVANCE_WAVE_SCHEMA, _handler(_advance_wave), "Select the next ready task wave and optionally mark it in progress.")
+    ctx.register_tool("hermes_flywheel_advance_wave", TOOLSET, ADVANCE_WAVE_SCHEMA, _handler(_advance_wave), "Select the next ready task wave; blocks on incomplete prior waves unless forced.")
+    ctx.register_tool("hermes_flywheel_update_task", TOOLSET, UPDATE_TASK_SCHEMA, _handler(_update_task), "Update a task status plus optional lifecycle notes and blocker fields.")
     ctx.register_tool("hermes_flywheel_review", TOOLSET, REVIEW_SCHEMA, _handler(_review), "Validate and record a completion report.")
     ctx.register_tool("hermes_flywheel_doctor", TOOLSET, DOCTOR_SCHEMA, _handler(_doctor), "Run local health checks for the flywheel plugin state.")
     ctx.register_tool("hermes_flywheel_get_skill", TOOLSET, GET_SKILL_SCHEMA, _handler(_get_skill), "Load a bundled flywheel skill document.")
