@@ -2,16 +2,23 @@
 
 Hermes Agent Flywheel is a local-first Hermes plugin for an agent-flywheel/pi-orchestrator style workflow loop.
 
-v0.6 keeps the runtime stdlib-only and adds a safe wave-to-worker assignment contract: Hermes can now bridge selected task waves to reusable no-op worker records without spawning agents, processes, tmux panes, NTM sessions, or network services.
+v0.7 keeps the runtime stdlib-only and adds immutable worker handoff packets: Hermes can now materialize assigned tasks into local per-worker JSON packets without spawning agents, processes, tmux panes, NTM sessions, or network services.
 
 Product truth for this scaffold:
 
 - Local-first and safe by default.
 - Python stdlib only at runtime.
 - Stores state as JSON under `.hermes-flywheel/` in the current working directory.
-- Provides observation, repo profiling, planning/task graph creation, task lifecycle updates, no-op worker lifecycle records, wave-to-worker assignment records, evidence-gated wave advancement, standalone task verification, integrity checkpoints, review/completion reporting, doctor checks, safe remediation, and packaged skill text loading.
+- Provides observation, repo profiling, planning/task graph creation, task lifecycle updates, no-op worker lifecycle records, wave-to-worker assignment records, immutable handoff packets, evidence-gated wave advancement, standalone task verification, integrity checkpoints, review/completion reporting, doctor checks, safe remediation, and packaged skill text loading.
 - Does not spawn agents or call external services during normal tool handling; repository hosting/remotes are managed outside the plugin.
 - Intended to be commit-worthy scaffolding, not a complete production orchestrator.
+
+## v0.7 capabilities
+
+- Immutable handoff packets: `hermes_flywheel_create_handoffs` materializes existing assignment records into local JSON packets under `.hermes-flywheel/handoffs/`.
+- Packet contract: each packet includes task spec, wave context, assignment/worker ids, constraints, evidence requirements, resume metadata, creation state hash, and packet hash.
+- Safety boundary: handoff creation never spawns anything, never mutates task status, and never creates completion evidence; packets are static worker-consumption artifacts for future runtimes.
+- Observation/doctor awareness: observation includes handoff summaries and doctor validates handoff state shape plus handoff directory health.
 
 ## v0.6 capabilities
 
@@ -57,6 +64,7 @@ Product truth for this scaffold:
 - `hermes_flywheel_plugin/task_lifecycle.py` - task status/notes/blocker updates.
 - `hermes_flywheel_plugin/worker_runtime.py` - state-backed no-op worker records and append-only events.
 - `hermes_flywheel_plugin/assignment.py` - safe wave-to-worker assignment records and append-only assignment events.
+- `hermes_flywheel_plugin/handoff.py` - immutable worker handoff packets and append-only handoff events.
 - `hermes_flywheel_plugin/completion_report.py` - completion report validation and atomic success report files.
 - `hermes_flywheel_plugin/observe.py` - local repo observation.
 - `hermes_flywheel_plugin/doctor.py` - environment and state checks plus stable remediation recommendations.
@@ -92,7 +100,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-## Tool names registered in v0.6
+## Tool names registered in v0.7
 
 - `hermes_flywheel_observe`
 - `hermes_flywheel_profile`
@@ -103,6 +111,7 @@ pytest
 - `hermes_flywheel_update_worker`
 - `hermes_flywheel_list_workers`
 - `hermes_flywheel_assign_wave`
+- `hermes_flywheel_create_handoffs`
 - `hermes_flywheel_advance_wave`
 - `hermes_flywheel_review`
 - `hermes_flywheel_doctor`
@@ -125,14 +134,15 @@ Checkpoint contract:
 - Checkpoints include an integrity envelope whose `stateHash` is the SHA-256 of canonical JSON state; validation detects missing, invalid JSON, and hash-mismatched checkpoints.
 - A wave is considered complete only when each wave task has status `done` and its latest completion report has outcome `success`.
 - Tool handlers return structured JSON strings so Hermes can surface either `ok` results or normalized errors.
-- Worker records and worker events are state-backed no-op lifecycle facts only; v0.6 never spawns processes, agents, panes, or network services.
+- Worker records and worker events are state-backed no-op lifecycle facts only; v0.7 never spawns processes, agents, panes, or network services.
 - Assignment records bridge a wave task to a no-op worker. Repeated assignment reuses an active worker for the same `(wave_id, task_id, runtime)` and appends an `assignment_reused` event instead of duplicating the record.
+- Handoff packets materialize existing assignments into immutable local JSON under `.hermes-flywheel/handoffs/`; they carry instructions and evidence requirements for future workers but never count as proof of execution.
 - Assignment skips non-assignable task statuses and never marks task completion or writes completion evidence; successful task completion still requires explicit task lifecycle update plus successful completion report evidence.
 
 Remediation contract:
 
 - `hermes_flywheel_remediate` is dry-run by default and must be called with `dry_run: false` to write anything.
-- Safe actions are local-only directory creation and checkpoint writes via the state store.
+- Safe actions are local-only directory creation, including the handoffs directory, and checkpoint writes via the state store.
 - Unknown remediation ids return structured per-action errors; operator actions are reported as skipped.
 
 ## Roadmap

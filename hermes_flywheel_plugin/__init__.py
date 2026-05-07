@@ -9,6 +9,7 @@ from .assignment import assign_wave
 from .completion_report import record_completion_report
 from .doctor import run_doctor
 from .errors import error_json, ok
+from .handoff import create_handoffs
 from .observe import observe
 from .planning import create_tasks, make_plan, scaffold_tasks_for_goal
 from .profile import build_repo_profile
@@ -17,6 +18,7 @@ from .schemas import (
     ADVANCE_WAVE_SCHEMA,
     ASSIGN_WAVE_SCHEMA,
     CHECKPOINT_SCHEMA,
+    CREATE_HANDOFFS_SCHEMA,
     CREATE_TASKS_SCHEMA,
     CREATE_WORKER_SCHEMA,
     DOCTOR_SCHEMA,
@@ -105,6 +107,18 @@ def _assign_wave(args: dict[str, Any]) -> dict[str, Any]:
     )
 
 
+def _create_handoffs(args: dict[str, Any]) -> dict[str, Any]:
+    return create_handoffs(
+        args.get("cwd"),
+        args.get("assignment_ids"),
+        args.get("wave_id", ""),
+        args.get("reuse_existing", True),
+        args.get("constraints"),
+        args.get("evidence_requirements"),
+        args.get("resume_metadata"),
+    )
+
+
 def _review(args: dict[str, Any]) -> dict[str, Any]:
     return {"completion_report": record_completion_report(args.get("report", {}), args.get("cwd"))}
 
@@ -159,6 +173,7 @@ def register(ctx: Any) -> None:
     ctx.register_tool("hermes_flywheel_update_worker", TOOLSET, UPDATE_WORKER_SCHEMA, _handler(_update_worker), "Advance a no-op worker lifecycle and append a worker event.")
     ctx.register_tool("hermes_flywheel_list_workers", TOOLSET, LIST_WORKERS_SCHEMA, _handler(_list_workers), "List state-backed no-op workers and recent events.")
     ctx.register_tool("hermes_flywheel_assign_wave", TOOLSET, ASSIGN_WAVE_SCHEMA, _handler(_assign_wave), "Create or reuse no-op worker records for assignable tasks in a wave without spawning anything.")
+    ctx.register_tool("hermes_flywheel_create_handoffs", TOOLSET, CREATE_HANDOFFS_SCHEMA, _handler(_create_handoffs), "Create immutable local worker handoff packets from existing assignments without spawning anything.")
     ctx.register_tool("hermes_flywheel_review", TOOLSET, REVIEW_SCHEMA, _handler(_review), "Validate and record a completion report.")
     ctx.register_tool("hermes_flywheel_doctor", TOOLSET, DOCTOR_SCHEMA, _handler(_doctor), "Run local health checks for the flywheel plugin state.")
     ctx.register_tool("hermes_flywheel_remediate", TOOLSET, REMEDIATE_SCHEMA, _handler(_remediate), "Dry-run or apply safe local doctor remediations.")

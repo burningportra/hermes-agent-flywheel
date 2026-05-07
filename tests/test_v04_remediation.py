@@ -33,6 +33,7 @@ def test_doctor_v2_reports_structured_checks_and_remediations(tmp_path):
         "state_dir",
         "completion_report_dir",
         "checkpoints_dir",
+        "handoffs_dir",
         "checkpoint_valid",
     }
     assert all("severity" in check and "category" in check for check in doctor["checks"])
@@ -42,6 +43,7 @@ def test_doctor_v2_reports_structured_checks_and_remediations(tmp_path):
         "write_missing_checkpoint",
         "ensure_completion_report_dir",
         "ensure_checkpoints_dir",
+        "ensure_handoffs_dir",
     ]
 
 
@@ -63,6 +65,7 @@ def test_remediate_apply_creates_dirs_and_checkpoint(tmp_path):
     assert store.state_dir.is_dir()
     assert (store.state_dir / "completion").is_dir()
     assert store.checkpoints_dir.is_dir()
+    assert (store.state_dir / "handoffs").is_dir()
     assert store.checkpoint_path.is_file()
     assert store.validate_checkpoint()["ok"] is True
     assert any(item["id"] == "write_missing_checkpoint" and item["applied"] for item in result["results"])

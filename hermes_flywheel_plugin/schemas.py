@@ -88,6 +88,19 @@ ASSIGN_WAVE_SCHEMA = {
     },
 }
 
+CREATE_HANDOFFS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "cwd": {"type": "string"},
+        "assignment_ids": {"type": "array", "items": {"type": "string"}},
+        "wave_id": {"type": "string"},
+        "reuse_existing": {"type": "boolean"},
+        "constraints": {"type": "array", "items": {"type": "string"}},
+        "evidence_requirements": {"type": "array", "items": {"type": "string"}},
+        "resume_metadata": {"type": "object"},
+    },
+}
+
 REVIEW_SCHEMA = {
     "type": "object",
     "properties": {

@@ -7,6 +7,7 @@ from typing import Any
 
 from .advance_wave import incomplete_started_wave
 from .assignment import assignment_summary
+from .handoff import handoff_summary
 from .profile import build_repo_profile
 from .state import StateStore, utc_now
 from .worker_runtime import worker_summary
@@ -27,6 +28,7 @@ def observe(cwd: str | Path | None = None, note: str = "") -> dict[str, Any]:
         "blocked_wave": blocker,
         "workers": worker_summary(state),
         "assignments": assignment_summary(state),
+        "handoffs": handoff_summary(state),
     }
     state.setdefault("observations", []).append(observation)
     store.save(state)
