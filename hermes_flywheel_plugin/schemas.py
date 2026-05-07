@@ -67,6 +67,20 @@ REVIEW_SCHEMA = {
 
 DOCTOR_SCHEMA = {"type": "object", "properties": {"cwd": {"type": "string"}}}
 
+CHECKPOINT_SCHEMA = {
+    "type": "object",
+    "properties": {"cwd": {"type": "string"}, "label": {"type": "string"}},
+}
+
+VERIFY_TASKS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "cwd": {"type": "string"},
+        "task_ids": {"type": "array", "items": {"type": "string"}},
+        "require_evidence": {"type": "boolean"},
+    },
+}
+
 GET_SKILL_SCHEMA = {
     "type": "object",
     "properties": {"name": {"type": "string", "enum": ["start", "planning", "review"]}},

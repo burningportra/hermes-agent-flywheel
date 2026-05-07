@@ -13,6 +13,7 @@ from .planning import create_tasks, make_plan, scaffold_tasks_for_goal
 from .profile import build_repo_profile
 from .schemas import (
     ADVANCE_WAVE_SCHEMA,
+    CHECKPOINT_SCHEMA,
     CREATE_TASKS_SCHEMA,
     DOCTOR_SCHEMA,
     GET_SKILL_SCHEMA,
@@ -21,10 +22,12 @@ from .schemas import (
     PROFILE_SCHEMA,
     REVIEW_SCHEMA,
     UPDATE_TASK_SCHEMA,
+    VERIFY_TASKS_SCHEMA,
 )
 from .skills_bundle import get_skill
 from .state import StateStore
 from .task_lifecycle import update_task
+from .verification import verify_tasks
 
 TOOLSET = "hermes_flywheel"
 
@@ -88,6 +91,16 @@ def _checkpoint(args: dict[str, Any]) -> dict[str, Any]:
     return {"checkpoint": StateStore.for_cwd(args.get("cwd")).checkpoint(args.get("label", "manual"))}
 
 
+def _verify_tasks(args: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "verification": verify_tasks(
+            args.get("cwd"),
+            args.get("task_ids"),
+            args.get("require_evidence", True),
+        )
+    }
+
+
 def register(ctx: Any) -> None:
     """Register Hermes tools.
 
@@ -103,4 +116,6 @@ def register(ctx: Any) -> None:
     ctx.register_tool("hermes_flywheel_update_task", TOOLSET, UPDATE_TASK_SCHEMA, _handler(_update_task), "Update a task status plus optional lifecycle notes and blocker fields.")
     ctx.register_tool("hermes_flywheel_review", TOOLSET, REVIEW_SCHEMA, _handler(_review), "Validate and record a completion report.")
     ctx.register_tool("hermes_flywheel_doctor", TOOLSET, DOCTOR_SCHEMA, _handler(_doctor), "Run local health checks for the flywheel plugin state.")
+    ctx.register_tool("hermes_flywheel_checkpoint", TOOLSET, CHECKPOINT_SCHEMA, _handler(_checkpoint), "Write an integrity-backed canonical local checkpoint.")
+    ctx.register_tool("hermes_flywheel_verify_tasks", TOOLSET, VERIFY_TASKS_SCHEMA, _handler(_verify_tasks), "Read-only verification of task completion and evidence files.")
     ctx.register_tool("hermes_flywheel_get_skill", TOOLSET, GET_SKILL_SCHEMA, _handler(_get_skill), "Load a bundled flywheel skill document.")

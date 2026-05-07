@@ -2,16 +2,21 @@
 
 Hermes Agent Flywheel is a local-first Hermes plugin for an agent-flywheel/pi-orchestrator style workflow loop.
 
-v0.2 keeps the runtime stdlib-only and adds evidence gates around wave advancement so parent agents can verify one wave before starting the next.
+v0.3 keeps the runtime stdlib-only and adds integrity-backed checkpoints plus standalone task verification so parent agents can verify one wave before starting the next.
 
 Product truth for this scaffold:
 
 - Local-first and safe by default.
 - Python stdlib only at runtime.
 - Stores state as JSON under `.hermes-flywheel/` in the current working directory.
-- Provides observation, repo profiling, planning/task graph creation, task lifecycle updates, evidence-gated wave advancement, review/completion reporting, doctor checks, and packaged skill text loading.
+- Provides observation, repo profiling, planning/task graph creation, task lifecycle updates, evidence-gated wave advancement, standalone task verification, integrity checkpoints, review/completion reporting, doctor checks, and packaged skill text loading.
 - Does not spawn agents or call external services during normal tool handling; repository hosting/remotes are managed outside the plugin.
 - Intended to be commit-worthy scaffolding, not a complete production orchestrator.
+
+## v0.3 capabilities
+
+- Integrity-backed canonical checkpoint: `hermes_flywheel_checkpoint` writes `.hermes-flywheel/checkpoint.json` with `schemaVersion`, `writtenAt`, `flywheelVersion`, optional `gitHead`, embedded `state`, and `stateHash` as SHA-256 over canonical JSON state. Historical raw snapshots remain under `.hermes-flywheel/checkpoints/` for compatibility.
+- Standalone verification: `hermes_flywheel_verify_tasks` is read-only and verifies requested tasks, or the active started wave by default, against task status, latest successful completion report state, and matching completion report files.
 
 ## v0.2 capabilities
 
@@ -26,7 +31,7 @@ Product truth for this scaffold:
 
 - `hermes_flywheel_plugin/plugin.yaml` - Hermes plugin metadata.
 - `hermes_flywheel_plugin/__init__.py` - `register(ctx)` entrypoint and JSON-string tool handlers.
-- `hermes_flywheel_plugin/state.py` - JSON state store and atomic checkpoints.
+- `hermes_flywheel_plugin/state.py` - JSON state store and integrity-backed atomic checkpoints.
 - `hermes_flywheel_plugin/errors.py` - structured `FlywheelError` responses.
 - `hermes_flywheel_plugin/profile.py` - local repository profile builder.
 - `hermes_flywheel_plugin/task_graph.py` - task graph model and transitions.
@@ -36,6 +41,7 @@ Product truth for this scaffold:
 - `hermes_flywheel_plugin/doctor.py` - environment and state checks.
 - `hermes_flywheel_plugin/planning.py` - plan/task graph creation.
 - `hermes_flywheel_plugin/advance_wave.py` - picks and advances the next wave of work with evidence gates.
+- `hermes_flywheel_plugin/verification.py` - read-only task verification helper/tool contract.
 - `hermes_flywheel_plugin/skills_bundle.py` - packaged skill text loader.
 - `hermes_flywheel_plugin/skills/` - packaged starter skill documents.
 - `skills/` - repo-level starter skill documents/fallback.
@@ -64,7 +70,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-## Tool names registered in v0.2
+## Tool names registered in v0.3
 
 - `hermes_flywheel_observe`
 - `hermes_flywheel_profile`
@@ -74,20 +80,22 @@ pytest
 - `hermes_flywheel_advance_wave`
 - `hermes_flywheel_review`
 - `hermes_flywheel_doctor`
+- `hermes_flywheel_checkpoint`
+- `hermes_flywheel_verify_tasks`
 - `hermes_flywheel_get_skill`
 
 Handlers return JSON strings for Hermes compatibility.
 
 ## State, reports, and checkpoints
 
-State lives in `.hermes-flywheel/state.json` below the active working directory. Checkpoints are written atomically to `.hermes-flywheel/checkpoints/`.
+State lives in `.hermes-flywheel/state.json` below the active working directory. The canonical checkpoint is written atomically to `.hermes-flywheel/checkpoint.json`; compatibility snapshots are written to `.hermes-flywheel/checkpoints/`.
 
 Completion reports are the handoff record for finished tasks and must include `task_id`, `outcome`, and `summary`. Successful completion reports also produce an atomic disk copy under `.hermes-flywheel/completion/`.
 
 Checkpoint contract:
 
 - Mutating tools persist local JSON state before returning a success response.
-- Checkpoints are immutable JSON snapshots of the current state, named from a human-readable label.
+- Checkpoints include an integrity envelope whose `stateHash` is the SHA-256 of canonical JSON state; validation detects missing, invalid JSON, and hash-mismatched checkpoints.
 - A wave is considered complete only when each wave task has status `done` and its latest completion report has outcome `success`.
 - Tool handlers return structured JSON strings so Hermes can surface either `ok` results or normalized errors.
 

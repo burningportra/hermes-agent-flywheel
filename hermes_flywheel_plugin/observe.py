@@ -15,7 +15,7 @@ def observe(cwd: str | Path | None = None, note: str = "") -> dict[str, Any]:
     profile = build_repo_profile(root, persist=False)
     store = StateStore.for_cwd(root)
     state = store.load()
-    blocker = incomplete_started_wave(state)
+    blocker = incomplete_started_wave(state, root)
     observation = {
         "root": str(root),
         "created_at": utc_now(),

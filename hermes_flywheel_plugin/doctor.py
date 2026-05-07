@@ -23,7 +23,7 @@ def run_doctor(cwd: str | Path | None = None) -> dict[str, Any]:
     try:
         state = store.load()
         checks.append({"name": "state_load", "ok": True, "detail": f"version={state.get('version')}"})
-        blocker = incomplete_started_wave(state)
+        blocker = incomplete_started_wave(state, root)
         if blocker:
             checks.append(
                 {
@@ -37,6 +37,28 @@ def run_doctor(cwd: str | Path | None = None) -> dict[str, Any]:
             checks.append({"name": "active_wave_complete", "ok": True, "detail": "no incomplete started wave"})
     except Exception as exc:  # noqa: BLE001 - doctor should report failures as data
         checks.append({"name": "state_load", "ok": False, "detail": str(exc)})
+
+    checkpoint = store.validate_checkpoint()
+    if checkpoint.get("reason") == "missing":
+        checks.append({"name": "checkpoint_valid", "ok": False, "detail": "missing canonical checkpoint", "data": checkpoint})
+    elif checkpoint.get("ok"):
+        checks.append(
+            {
+                "name": "checkpoint_valid",
+                "ok": True,
+                "detail": "current" if checkpoint.get("current") else "valid but not current",
+                "data": checkpoint,
+            }
+        )
+    else:
+        checks.append(
+            {
+                "name": "checkpoint_valid",
+                "ok": False,
+                "detail": str(checkpoint.get("reason") or "invalid checkpoint"),
+                "data": checkpoint,
+            }
+        )
 
     completion_dir = store.state_dir / "completion"
     checks.append(
