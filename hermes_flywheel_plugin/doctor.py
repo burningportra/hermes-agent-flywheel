@@ -8,10 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .advance_wave import incomplete_started_wave
-from .assignment import assignment_summary
-from .handoff import HANDOFF_DIR_NAME, handoff_summary
 from .state import StateStore
-from .worker_runtime import worker_summary
 
 DOCTOR_SCHEMA_VERSION = 2
 
@@ -40,14 +37,6 @@ REMEDIATION_DEFINITIONS: dict[str, dict[str, Any]] = {
         "category": "filesystem",
         "description": "Create the local checkpoint history directory.",
     },
-    "ensure_handoffs_dir": {
-        "id": "ensure_handoffs_dir",
-        "action": "ensure_directory",
-        "path": ".hermes-flywheel/handoffs",
-        "safe": True,
-        "category": "filesystem",
-        "description": "Create the local immutable handoff packet directory.",
-    },
     "write_missing_checkpoint": {
         "id": "write_missing_checkpoint",
         "action": "write_checkpoint",
@@ -75,13 +64,6 @@ REMEDIATION_DEFINITIONS: dict[str, dict[str, Any]] = {
         "safe": False,
         "category": "workflow",
         "description": "Operator must finish, block, or explicitly override the incomplete started wave.",
-    },
-    "resolve_stale_worker": {
-        "id": "resolve_stale_worker",
-        "action": "operator_action",
-        "safe": False,
-        "category": "worker",
-        "description": "Operator must heartbeat, stop, fail, or complete stale no-op workers.",
     },
 }
 
@@ -166,59 +148,6 @@ def run_doctor(cwd: str | Path | None = None) -> dict[str, Any]:
             )
         else:
             _check(checks, "active_wave_complete", True, "no incomplete started wave", category="workflow")
-
-        workers = state.get("workers", [])
-        worker_events = state.get("worker_events", [])
-        assignments = state.get("assignments", [])
-        assignment_events = state.get("assignment_events", [])
-        handoffs = state.get("handoffs", [])
-        handoff_events = state.get("handoff_events", [])
-        worker_shape_ok = isinstance(workers, list) and isinstance(worker_events, list)
-        _check(
-            checks,
-            "worker_state_shape",
-            worker_shape_ok,
-            "workers and worker_events are lists" if worker_shape_ok else "workers and worker_events must be lists",
-            severity="error",
-            category="worker",
-        )
-        if worker_shape_ok:
-            summary = worker_summary(state)
-            stale = summary.get("stale", [])
-            if stale:
-                _add_remediation(remediations, "resolve_stale_worker", data={"worker_ids": stale})
-                _check(
-                    checks,
-                    "active_workers",
-                    False,
-                    f"stale workers: {', '.join(stale)}",
-                    severity="warning",
-                    category="worker",
-                    data=summary,
-                    remediations=["resolve_stale_worker"],
-                )
-            else:
-                _check(checks, "active_workers", True, f"active={len(summary.get('active', []))}", category="worker", data=summary)
-        assignment_shape_ok = isinstance(assignments, list) and isinstance(assignment_events, list)
-        _check(
-            checks,
-            "assignment_state_shape",
-            assignment_shape_ok,
-            "assignments and assignment_events are lists" if assignment_shape_ok else "assignments and assignment_events must be lists",
-            severity="error",
-            category="assignment",
-            data=assignment_summary(state) if assignment_shape_ok else None,
-        )
-        handoff_shape_ok = isinstance(handoffs, list) and isinstance(handoff_events, list)
-        _check(
-            checks,
-            "handoff_state_shape",
-            handoff_shape_ok,
-            "handoffs and handoff_events are lists" if handoff_shape_ok else "handoffs and handoff_events must be lists",
-            severity="error",
-            category="handoff",
-            data=handoff_summary(state) if handoff_shape_ok else None,
-        )
     except Exception as exc:  # noqa: BLE001 - doctor should report failures as data
         _check(checks, "state_load", False, str(exc), severity="error", category="state")
 
@@ -293,20 +222,6 @@ def run_doctor(cwd: str | Path | None = None) -> dict[str, Any]:
         severity="warning",
         category="filesystem",
         remediations=[] if checkpoints_ok else ["ensure_checkpoints_dir"],
-    )
-
-    handoffs_dir = store.state_dir / HANDOFF_DIR_NAME
-    handoffs_ok = handoffs_dir.exists() and handoffs_dir.is_dir()
-    if not handoffs_ok:
-        _add_remediation(remediations, "ensure_handoffs_dir", target=str(handoffs_dir))
-    _check(
-        checks,
-        "handoffs_dir",
-        handoffs_ok,
-        str(handoffs_dir),
-        severity="warning",
-        category="filesystem",
-        remediations=[] if handoffs_ok else ["ensure_handoffs_dir"],
     )
 
     return {

@@ -43,64 +43,6 @@ UPDATE_TASK_SCHEMA = {
     "required": ["task_id"],
 }
 
-CREATE_WORKER_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "cwd": {"type": "string"},
-        "task_id": {"type": "string"},
-        "wave_id": {"type": "string"},
-        "name": {"type": "string"},
-        "runtime": {"type": "string", "enum": ["noop"]},
-        "metadata": {"type": "object"},
-    },
-}
-
-UPDATE_WORKER_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "cwd": {"type": "string"},
-        "worker_id": {"type": "string"},
-        "action": {"type": "string", "enum": ["start", "heartbeat", "idle", "complete", "fail", "stop"]},
-        "message": {"type": "string"},
-        "data": {"type": "object"},
-    },
-    "required": ["worker_id", "action"],
-}
-
-LIST_WORKERS_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "cwd": {"type": "string"},
-        "status": {"type": "string", "enum": ["created", "running", "idle", "completed", "failed", "stopped"]},
-        "task_id": {"type": "string"},
-        "wave_id": {"type": "string"},
-    },
-}
-
-ASSIGN_WAVE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "cwd": {"type": "string"},
-        "wave_id": {"type": "string"},
-        "runtime": {"type": "string", "enum": ["noop"]},
-        "worker_name_prefix": {"type": "string"},
-        "metadata": {"type": "object"},
-    },
-}
-
-CREATE_HANDOFFS_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "cwd": {"type": "string"},
-        "assignment_ids": {"type": "array", "items": {"type": "string"}},
-        "wave_id": {"type": "string"},
-        "reuse_existing": {"type": "boolean"},
-        "constraints": {"type": "array", "items": {"type": "string"}},
-        "evidence_requirements": {"type": "array", "items": {"type": "string"}},
-        "resume_metadata": {"type": "object"},
-    },
-}
-
 REVIEW_SCHEMA = {
     "type": "object",
     "properties": {
