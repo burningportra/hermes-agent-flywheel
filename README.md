@@ -8,7 +8,7 @@ Product truth for this scaffold:
 - Python stdlib only at runtime.
 - Stores state as JSON under `.hermes-flywheel/` in the current working directory.
 - Provides observation, repo profiling, planning/task graph creation, wave advancement, review/completion reporting, doctor checks, and skill text loading.
-- Does not spawn agents, call external services, or create GitHub remotes.
+- Does not spawn agents or call external services during normal tool handling; repository hosting/remotes are managed outside the plugin.
 - Intended to be commit-worthy scaffolding, not a complete production orchestrator.
 
 ## Repository layout
@@ -68,9 +68,22 @@ Handlers return JSON strings for Hermes compatibility.
 
 State lives in `.hermes-flywheel/state.json` below the active working directory. Checkpoints are written atomically to `.hermes-flywheel/checkpoints/`.
 
+Checkpoint contract:
+
+- Mutating tools persist local JSON state before returning a success response.
+- Checkpoints are immutable JSON snapshots of the current state, named from a human-readable label.
+- Completion reports are the handoff record for finished tasks and must include `task_id`, `outcome`, and `summary`.
+- Tool handlers return structured JSON strings so Hermes can surface either `ok` results or normalized errors.
+
+## Roadmap
+
+- Keep the MVP local-first while tightening Hermes plugin compatibility.
+- Add richer planning heuristics and dependency validation without introducing network side effects by default.
+- Expand review/checkpoint workflows so parent agents can reliably verify task completion between waves.
+- Document optional integrations, including GitHub remotes/CI, as external project operations rather than hidden plugin behavior.
+
 ## Current limitations
 
 - No background agent execution.
-- No remote repository creation.
 - No network calls.
 - Planning heuristics are intentionally simple and deterministic.
